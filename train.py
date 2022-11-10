@@ -159,7 +159,7 @@ def train_one_epoch(train_loader, model, criterion, optimizer, scheduler, epoch,
     total = len(true_labels)
     acc = 100*correct/total
     f1_score = metrics.f1_score(y_true=true_labels, y_pred=pred_labels, average='macro')
-    print('Epoch: [{0}/{1}][{2}/{3}]\t'
+    print('Epoch: [{0}/{1}]\t'
             'LR: {LR:.6f}\t'
             'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
             'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
@@ -167,7 +167,7 @@ def train_one_epoch(train_loader, model, criterion, optimizer, scheduler, epoch,
             'Accuracy {acc:.4f}({cor}/{total})\t'
             'F1 {F1:.4f}\t'
         .format(
-        epoch, args.epoch, i, len(train_loader), LR=scheduler.get_lr()[0], batch_time=batch_time,
+        epoch, args.epoch, LR=scheduler.get_lr()[0], batch_time=batch_time,
         data_time=data_time, loss=losses, acc=acc, cor=correct, total=total, F1=f1_score))
                 
     # printSave_one_epoch(epoch, args, batch_time, data_time, top1, top5, losses)
@@ -214,13 +214,13 @@ def validate(val_loader, model, criterion, epoch, args):
     correct = (true_labels==pred_labels).sum()
     total = len(true_labels)
     acc = 100*correct/total
-    print('Test (on val set): [{0}/{1}][{2}/{3}]\t'
+    print('Test (on val set): [{0}/{1}]\t'
             'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
             'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
             'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
             'Accuracy {acc:.4f}({cor}/{total})\t'
             'F1 {F1:.4f}\t'
-        .format(epoch, args.epoch, i, len(val_loader), batch_time=batch_time, loss=losses,
+        .format(epoch, args.epoch, batch_time=batch_time, loss=losses,
         data_time=data_time, acc=acc, cor=correct, total=total, F1=f1_score))
 
     # printSave_one_epoch(epoch, args, batch_time, data_time, top1, top5, losses, False)
@@ -236,6 +236,7 @@ def inference(model, test_loader):
     model.cuda()
     model.eval()
     preds = []
+    threshold = 0.5
     submit = pd.read_csv("./1000_sample_submission.csv")
     with torch.no_grad():
         for img in (test_loader):
@@ -244,6 +245,7 @@ def inference(model, test_loader):
             output = output.squeeze(1).to('cpu')
             preds += output.tolist()
     
+    preds = np.where(np.array(preds) > threshold, 1, 0)
     submit['result'] = preds
     submit.to_csv('./1000_submission.csv', index=False)
 

@@ -49,7 +49,7 @@ def create_dataloader(args):
     train_df = pd.read_csv("train_df.csv")
     val_df = pd.read_csv("val_df.csv")
     train_set = CustomDataset(train_df, transform=get_transform("train"))
-    val_set = CustomDataset(val_df, transform=get_transform("test"))
+    val_set = CustomDataset(val_df, transform=get_transform("val"))
     test_set = TestDataset(transform=get_transform("test"))
     # train_set = ImageFolder(root = DATA_DIR+"/Train",
     #                     transform = get_transform("train"))
@@ -77,6 +77,11 @@ def get_transform(param):
         transform = transforms.Compose([
                         transforms.Resize(512),
                         transforms.RandomHorizontalFlip(),
+                        transforms.ToTensor(),
+                    ])
+    elif param == "val":
+        transform = transforms.Compose([
+                        transforms.Resize(512),
                         transforms.ToTensor(),
                     ])
     elif param == "test":

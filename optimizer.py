@@ -89,7 +89,7 @@ def get_optimizer_and_scheduler(model, args, iter_per_epoch):
     if args.scheduler == 'cosine':
         main_scheduler = CosineAnnealingLR(optimizer, total_iter-warmup_iter, args.min_lr)
     elif args.scheduler == 'cosinerestarts':
-        main_scheduler = CosineAnnealingWarmUpRestarts(optimizer, T_0=args.epoch*iter_per_epoch//args.cosine_freq, T_mult=1, eta_max=0.9, T_up=5, gamma=0.5)
+        main_scheduler = CosineAnnealingWarmUpRestarts(optimizer, T_0=args.epoch*iter_per_epoch//args.cosine_freq, T_mult=1, eta_max=args.eta_max, T_up=5, gamma=0.5)
     elif args.scheduler == 'multistep':
         main_scheduler = MultiStepLR(optimizer, [epoch * args.iter_per_epoch for epoch in args.milestones])
     elif args.scheduler == 'step':
