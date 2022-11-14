@@ -76,6 +76,7 @@ def get_transform(param):
     if param == "train":
         transform = transforms.Compose([
                         transforms.Resize(512),
+                        transforms.RandomAdjustSharpness(sharpness_factor=10,p=0.5),
                         transforms.RandomHorizontalFlip(),
                         transforms.ToTensor(),
                     ])

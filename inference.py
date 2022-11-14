@@ -34,7 +34,7 @@ def main():
                             batch_size=16,
                             shuffle=False,
                             num_workers=4)
-    path = "/home/ljj0512/private/workspace/CP_urban-datathon_X-ray/log/2022-11-09 17:18:57/checkpoint.pth.tar"
+    path = "/home/ljj0512/private/workspace/CP_urban-datathon_X-ray/log/2022-11-10 23:52:37/checkpoint.pth.tar"
     checkpoint = torch.load(path)
 
     model = models.resnet18()

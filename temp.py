@@ -1,70 +1,80 @@
-# import os
-# os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
-# os.environ['CUDA_VISIBLE_DEVICES'] = "7,8"
-# import torch
-# import pandas as pd
-# import torchvision.models as models
-# import torch.nn as nn
-# from torch.utils.data import Dataset, DataLoader
-# from dataset import get_transform
-# from PIL import Image
-# from torchvision.models import  EfficientNet_B6_Weights, EfficientNet_B0_Weights, EfficientNet_B7_Weights
-# from train import seed_everything
-
-# class TestDataset(Dataset):
-#     def __init__(self, transform=None):
-#         self.transform = transform
-#         self.dir = "/home/ljj0512/private/workspace/CP_urban-datathon_CT/test"
-    
-#     def __len__(self):
-#         return len(os.listdir(self.dir))
-
-#     def __getitem__(self, index):
-#         img_path = sorted(os.listdir(self.dir))[index]
-#         image = self.transform(Image.open(os.path.join(self.dir,img_path)))
-#         return image
-
-# def main():
-#     seed_everything(0)
-#     test_set = TestDataset(transform=get_transform("test"))
-#     test_loader = DataLoader(dataset=test_set,
-#                             batch_size=2,
-#                             shuffle=False,
-#                             num_workers=4)
-#     # path = "/home/ljj0512/private/workspace/CP_urban-datathon_CT/log/10:12:24_effv2-m_f1-0.99_acc-99.8/checkpoint.pth.tar""
-#     path = "/home/ljj0512/private/workspace/CP_urban-datathon_CT/log/13:35:10/checkpoint.pth.tar"
-#     checkpoint = torch.load(path)
-    
-#     model = models.efficientnet_v2_m()
-#     model.classifier[1] = nn.Linear(in_features=1280, out_features=5, bias=True)
-#     # model = models.efficientnet_b6(weights=EfficientNet_B6_Weights.DEFAULT)
-#     # model.classifier[1] = nn.Linear(in_features=2304, out_features=5, bias=True)
-
-#     model.load_state_dict(checkpoint['state_dict'])    
-#     model = nn.DataParallel(model)
-#     inference(model, test_loader)
-
-
-# def inference(model, test_loader):
-#     # model.cuda()
-#     model.eval()
-#     preds = []
-#     submit = pd.read_csv("./1001_sample_submission.csv")
-#     with torch.no_grad():
-#         for img in (test_loader):
-#             # img = img.cuda()
-#             output = model(img)
-#             _, predicted = torch.max(output.data, dim=1)
-#             preds += predicted.cpu().tolist()
-    
-#     submit['result'] = preds
-#     submit.to_csv('./1001_submission.csv', index=False)
-#     print("inference finish")
-
-
-# if __name__ == '__main__':
-#     main()
-
+import os
+os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
+os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 import torch
-path = "/home/ljj0512/private/workspace/CP_urban-datathon_CT/log/13:35:10/checkpoint.pth.tar"
-checkpoint = torch.load(path)
+import torch.nn as nn
+from torch import LongTensor
+import pandas as pd 
+import typing as ty
+import yaml
+import numpy as np
+from dataset import *
+from utils import *
+import random
+from torchvision.models import  EfficientNet_B6_Weights, EfficientNet_B0_Weights, EfficientNet_B7_Weights
+import torchvision.models as models
+
+import wandb
+import torch.optim as optim
+
+
+class TestDataset(Dataset):
+    def __init__(self, transform=None):
+        self.transform = transform
+        self.dir = "/home/ljj0512/private/workspace/CP_urban-datathon_X-ray/test"
+    
+    def __len__(self):
+        return len(os.listdir(self.dir))
+
+    def __getitem__(self, index):
+        img_path = sorted(os.listdir(self.dir))[index]
+        image = self.transform(Image.open(os.path.join(self.dir,img_path)))
+        return image
+
+def seed_everything(seed):
+    random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = True
+
+def model_infer():
+    seed_everything(0) # Seed 고정
+
+    test_set = TestDataset(transform=get_transform("test"))
+    dl_test = DataLoader(dataset=test_set,
+                            batch_size=1,
+                            shuffle=False,
+                            num_workers=4)
+
+    submit = pd.read_csv("/home/ljj0512/private/workspace/CP_urban-datathon_X-ray/1000_sample_submission.csv")
+    model_path = "/home/ljj0512/private/workspace/CP_urban-datathon_X-ray/log/2022-11-10 23:52:37/checkpoint.pth.tar"
+
+    model = models.efficientnet_b6(weights=EfficientNet_B6_Weights.DEFAULT)
+    model.features[0][0] = nn.Conv2d(1, 56, kernel_size=(3,3), stride=(2,2), padding=(1,1), bias=False)
+    model.classifier[1] = nn.Linear(in_features=2304, out_features=1, bias=True)
+    model.load_state_dict(torch.load(model_path)["state_dict"])       
+    model.cuda()
+    model = nn.DataParallel(model)
+
+    model.eval()
+    model_preds = []
+    threshold = 0.5
+    with torch.no_grad():
+        for img in dl_test:
+            print(img.shape)
+            img = img.float().cuda()
+            model_pred = model(img)
+            model_pred = model_pred.squeeze(1).to('cpu')
+            model_preds += model_pred.cpu().tolist()
+    
+    model_preds = np.where(np.array(model_preds) > threshold, 1, 0)
+    submit['result'] = model_preds
+    print(len(model_preds))
+    submit.to_csv('/home/ljj0512/private/workspace/CP_urban-datathon_X-ray/submit13.csv', index=False)
+
+
+if __name__ == '__main__':
+    model_infer()

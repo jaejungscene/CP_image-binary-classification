@@ -256,5 +256,5 @@ if __name__ == '__main__':
     if args.wandb == True:
         date = datetime.now().strftime("%d-%m-%y,%H:%M:%S")
         temp = date
-        wandb.init(project='CP_urban-datathon', name=temp, entity='jaejungscene')
+        wandb.init(project='CP_urban-datathon', name=args.expname, entity='jaejungscene')
     run()
